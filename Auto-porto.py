@@ -110,25 +110,28 @@ class ValidadorApp:
         self.root.resizable(False, False)
 
         self._construir_interface()
-        self._carregar_arquivo_atual()
+        
+        # Validação caso a pasta não tenha PDFs
+        if not self.arquivos:
+            messagebox.showwarning("Atenção", "Nenhum arquivo PDF foi encontrado na pasta selecionada!")
+            self.root.after(100, self.root.destroy)
+        else:
+            self._carregar_arquivo_atual()
 
     def _construir_interface(self):
         frame = ttk.Frame(self.root, padding="15")
         frame.pack(fill=tk.BOTH, expand=True)
 
-        # Contador e Informações
         self.lbl_contador = ttk.Label(frame, text="", font=("Arial", 10, "bold"))
         self.lbl_contador.pack(anchor=tk.W, pady=(0, 5))
 
         self.lbl_original = ttk.Label(frame, text="", font=("Arial", 9), foreground="gray")
         self.lbl_original.pack(anchor=tk.W, pady=(0, 15))
 
-        # Campo do Nome Sugerido
         ttk.Label(frame, text="Nome Sugerido (pode editar se quiser):", font=("Arial", 9, "bold")).pack(anchor=tk.W)
         self.ent_novo_nome = ttk.Entry(frame, font=("Arial", 10))
         self.ent_novo_nome.pack(fill=tk.X, pady=(5, 15))
 
-        # Botões de Envio
         ttk.Label(frame, text="Selecione a pasta de destino para este arquivo:", font=("Arial", 9, "bold")).pack(anchor=tk.W, pady=(0, 5))
 
         btn_frame = ttk.Frame(frame)
@@ -145,7 +148,7 @@ class ValidadorApp:
     def _carregar_arquivo_atual(self):
         if self.indice >= len(self.arquivos):
             messagebox.showinfo("Concluído", "Todos os arquivos da pasta SCAN foram processados!")
-            self.root.destroy()
+            self.root.after(100, self.root.destroy)
             return
 
         nome_arq = self.arquivos[self.indice]
@@ -154,7 +157,6 @@ class ValidadorApp:
         self.lbl_contador.config(text=f"Arquivo {self.indice + 1} de {len(self.arquivos)}")
         self.lbl_original.config(text=f"Original: {nome_arq}")
 
-        # Processa texto e sugere nome
         texto = extrair_texto_pdf(caminho_arq)
         tipo = identificar_tipo(texto)
         data_doc = detectar_data(texto)
@@ -171,6 +173,11 @@ class ValidadorApp:
         self.tipo_exib = tipo
 
     def _processar_envio(self, subpasta_padrao: str | None):
+        if self.indice >= len(self.arquivos):
+            messagebox.showinfo("Concluído", "Todos os arquivos da pasta SCAN foram processados!")
+            self.root.after(100, self.root.destroy)
+            return
+
         nome_original = self.arquivos[self.indice]
         caminho_origem = self.pasta_scan / nome_original
         novo_nome_digitado = self.ent_novo_nome.get().strip()
@@ -182,7 +189,6 @@ class ValidadorApp:
         if not novo_nome_digitado.lower().endswith('.pdf'):
             novo_nome_digitado += '.pdf'
 
-        # Seleção do destino
         if subpasta_padrao:
             pasta_destino = DIRETORIO_ATUAL / subpasta_padrao
             pasta_destino.mkdir(exist_ok=True)
@@ -192,7 +198,6 @@ class ValidadorApp:
                 return
             pasta_destino = Path(caminho_sel)
 
-        # Executa movimentação
         try:
             nome_final = nome_unico(pasta_destino, novo_nome_digitado)
             caminho_final = pasta_destino / nome_final
